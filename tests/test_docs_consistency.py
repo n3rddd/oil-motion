@@ -82,6 +82,7 @@ class DocsConsistencyTests(unittest.TestCase):
             "navigation",
             "scene",
             "destination",
+            "aspect_ratio",
         ):
             self.assertNotIn(
                 field, top_level_fields, f"Motion Brief 复制了合同字段 {field}"
@@ -127,13 +128,15 @@ class DocsConsistencyTests(unittest.TestCase):
         expectations = {
             "motion_budget.py": ["delivery-selection.md"],
             "video_job.py": ["prompting.md"],
+            "image_job.py": ["prompting.md"],
+            "composite_alpha_keyframe.py": ["prompting.md"],
             "compose_travel_frames.py": ["prompting.md"],
             "approve-pilot": ["qa.md"],
             "verify-chain": ["qa.md"],
             "compile_scroll_video.py": ["baked-video.md", "chroma-video.md"],
             "optimize_motion.py": ["optimization.md"],
-            "loop_cleanup.py": ["minimax-spritesheet.md"],
-            "motion_pipeline.py": ["minimax-spritesheet.md"],
+            "loop_cleanup.py": ["alpha-atlas.md"],
+            "motion_pipeline.py": ["alpha-atlas.md"],
             "create_explainer.py": ["explainer.md"],
             "oil_motion_config.py": [],  # 原终端入口不再作为默认命令示例
         }
@@ -148,7 +151,17 @@ class DocsConsistencyTests(unittest.TestCase):
         skill = read("SKILL.md")
         self.assertIn("profile.ts\" setup default", skill)
         self.assertIn("profile.ts\" status default", skill)
-        self.assertIn("profile.ts\" run default -- python3", read("references/prompting.md"))
+        prompting = read("references/prompting.md")
+        for script in ("image_job.py", "video_job.py"):
+            self.assertIn(f"profile.ts\" run default -- python3 \"$OIL_MOTION/scripts/{script}\"", prompting)
+
+    def test_keyframes_use_bundled_generator_not_host_tool(self) -> None:
+        for path in [ROOT / "SKILL.md", *sorted((ROOT / "references").glob("*.md"))]:
+            self.assertNotIn("$imagegen", path.read_text(encoding="utf-8"), f"{path.name} 依赖宿主专属生图工具")
+        skill = read("SKILL.md")
+        self.assertIn("--background transparent", skill)
+        self.assertIn("--background opaque", skill)
+        self.assertNotIn("1792x1024", read("references/prompting.md"))
 
     def test_canonical_sections_not_duplicated(self) -> None:
         docs = {path.name: path.read_text(encoding="utf-8") for path in DOC_PATHS}
@@ -194,7 +207,7 @@ class DocsConsistencyTests(unittest.TestCase):
         self.assertNotIn("SHA-256 完全一致", doc)
 
     def test_minimax_keeps_only_atlas_specifics(self) -> None:
-        doc = read("references/minimax-spritesheet.md")
+        doc = read("references/alpha-atlas.md")
         # 图集路线专属命令仍在
         self.assertIn("loop_cleanup.py", doc)
         self.assertIn("atlas", doc)
@@ -269,7 +282,7 @@ class DocsConsistencyTests(unittest.TestCase):
         self.assertIn("Concept Contract", doc)
         self.assertIn("Identity Bible", doc)
         self.assertIn("场景背景段（baked 路线）", doc)
-        self.assertIn("视频色键段（仅 chroma 路线）", doc)
+        self.assertIn("视频色键段（page 路线）", doc)
         self.assertIn("直接生成真实透明背景 PNG", doc)
         self.assertIn("composite_alpha_keyframe.py", doc)
         self.assertIn("--stage", doc)
