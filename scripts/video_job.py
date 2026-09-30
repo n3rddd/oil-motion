@@ -32,6 +32,7 @@ from oil_motion_config import require_api_key
 
 API_ROOT = "https://zenmux.ai/api/v1"
 DEFAULT_MODEL = "minimax/minimax-h3-max"
+H3_MAX_RESOLUTIONS = ("480P", "768P")
 TERMINAL_STATES = {"succeeded", "failed", "cancelled", "canceled"}
 COMMON_RATIOS = {
     "21:9": 21 / 9,
@@ -240,6 +241,18 @@ def validate_production_gate(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def build_payload(args: argparse.Namespace) -> dict[str, Any]:
+    resolution = args.resolution
+    if args.model == DEFAULT_MODEL:
+        resolution = resolution.upper()
+        if resolution not in H3_MAX_RESOLUTIONS:
+            raise ValueError(
+                f"{args.model} 不支持分辨率 {args.resolution!r}；"
+                f"仅支持 {', '.join(H3_MAX_RESOLUTIONS)}。"
+                "请改用 --resolution 768P（母版）或 --resolution 480P（动作草案）；"
+                "母版像素不足时，下调 motion_budget.py 的 --display 或 --dpr，"
+                "并用 --source 传入实际尺寸重新预算，不要放大母版。"
+            )
+
     prompt = args.prompt
     if args.prompt_file:
         prompt = Path(args.prompt_file).read_text(encoding="utf-8").strip()
@@ -285,7 +298,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "model": args.model,
         "content": content,
-        "resolution": args.resolution,
+        "resolution": resolution,
         "generate_audio": False,
         "watermark": False,
         "return_last_frame": True,
@@ -416,8 +429,11 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--model", default=DEFAULT_MODEL)
     result.add_argument(
         "--resolution",
-        default="768p",
-        help="MiniMax H3 使用 768p 或 2K；其他模型按其原生参数传入",
+        default="768P",
+        help=(
+            "minimax/minimax-h3-max 仅支持 480P 或 768P（默认，大小写均可）；"
+            "其他模型按其原生参数传入"
+        ),
     )
     result.add_argument(
         "--ratio",

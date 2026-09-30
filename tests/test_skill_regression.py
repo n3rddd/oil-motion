@@ -42,6 +42,46 @@ CONFLICT_MARKER = re.compile(
 SKIPPED_DIRS = {".git", "__pycache__", ".venv", "node_modules"}
 
 
+class VideoResolutionTests(unittest.TestCase):
+    def test_h3_max_accepts_supported_resolutions_and_normalizes_case(self) -> None:
+        args = VIDEO.parser().parse_args(["--prompt", "测试", "--output", "out.mp4"])
+        self.assertEqual(VIDEO.build_payload(args)["resolution"], "768P")
+        for resolution in ("480P", "480p", "768P", "768p"):
+            with self.subTest(resolution=resolution):
+                args.resolution = resolution
+                self.assertEqual(
+                    VIDEO.build_payload(args)["resolution"], resolution.upper()
+                )
+
+    def test_h3_max_rejects_unsupported_resolutions_before_credentials_or_submit(self) -> None:
+        for resolution in ("2K", "1080P", "4K", "720p"):
+            with self.subTest(resolution=resolution):
+                args = VIDEO.parser().parse_args(
+                    ["--prompt", "测试", "--resolution", resolution, "--output", "out.mp4"]
+                )
+                with (
+                    mock.patch.object(VIDEO, "require_api_key") as credentials,
+                    mock.patch.object(VIDEO, "request_json") as request,
+                    self.assertRaises(ValueError) as raised,
+                ):
+                    VIDEO.generate(args)
+                self.assertIn(VIDEO.DEFAULT_MODEL, str(raised.exception))
+                self.assertIn(resolution, str(raised.exception))
+                self.assertIn("--resolution 768P", str(raised.exception))
+                self.assertIn("--resolution 480P", str(raised.exception))
+                credentials.assert_not_called()
+                request.assert_not_called()
+
+    def test_other_models_keep_their_native_resolution(self) -> None:
+        args = VIDEO.parser().parse_args(
+            [
+                "--prompt", "测试", "--output", "out.mp4",
+                "--model", "minimax/minimax-h3", "--resolution", "2K",
+            ]
+        )
+        self.assertEqual(VIDEO.build_payload(args)["resolution"], "2K")
+
+
 class ConflictMarkerTests(unittest.TestCase):
     def test_no_git_conflict_markers_anywhere_in_skill(self) -> None:
         offenders: list[str] = []

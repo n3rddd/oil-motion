@@ -98,6 +98,22 @@ capacity = columns * rows
 
 任何调整后都重新运行预算，旧报告失效。
 
+### 母版像素不足时的显示预算
+
+视频的可用分辨率见 [prompting.md](prompting.md#分辨率和时长)。预算使用探测到的实际
+像素尺寸，通过 `--source WIDTHxHEIGHT` 传入；不能把分辨率标签或放大后的尺寸当作源尺寸。
+同时核对宽高与最终裁切，目标 DPR 不得超过
+`min(源宽 / CSS 宽, 源高 / CSS 高)`。
+
+例如只有 `1344×768` 母版、最大显示为 `1280×720` CSS px 时，把原先的高 DPR 目标下调为
+`--display 1280x720 --dpr 1.05 --source 1344x768`，所需像素为 `1344×756`，
+再按上面的预算命令运行 `--strict` 并重写 `build/motion-budget.json`。若保留 DPR `2`，
+则把 16:9 显示目标缩小到最多 `672×378` CSS px。编译资源宽度不得超过母版可用宽度。
+
+降低目标 DPR 是素材清晰度取舍，不改变设备的真实 DPR，也不代表在高 DPR 屏幕上达到
+原来的清晰度。将调整同步到合同的 `destination` 与 Brief 的 `quality_target`、
+`pixel_dimensions`，按新目标重新验收；不得只改预算数值而仍在更大的容器中显示。
+
 ## 后续路由
 
 - `alpha-atlas`：读 [alpha-atlas.md](alpha-atlas.md)。

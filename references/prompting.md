@@ -140,7 +140,7 @@ node "$OIL_MOTION/scripts/credential-ui/src/profile.ts" run default -- python3 "
   --prompt-file source/segment-01.txt \
   --first-frame source/K0.png \
   --last-frame source/K1.png \
-  --resolution 768p \
+  --resolution 768P \
   --duration 5 \
   --seed 42 \
   --output source/segment-01.mp4 \
@@ -472,7 +472,11 @@ noise, over-detailed artificial lines, or visual noise.
 ## 分辨率和时长
 
 - 单段 3–6 秒，只完成一个主要变化；更长的动作拆成多段，否则容易漂移。
-- 先用 `768p` 验证动作，确认后再按清晰度需要用 `2K` 生成最终母版。
+- 默认模型 `minimax/minimax-h3-max` 仅支持 `480P`、`768P`，不支持 `1080P` 或 `2K`，
+  见 [ZenMux 模型信息](https://zenmux.ai/minimax/minimax-h3-max)。Pilot 与最终母版均用
+  `768P`；`480P` 可用于动作草案，不能当作更高清的母版。脚本接受大小写并在提交前校验。
 - 母版像素至少覆盖最大 CSS 尺寸乘目标 DPR。模型最高分辨率仍不够时，先调整显示目标或
-  说明取舍，不从低清母版放大。
+  说明取舍，不从低清母版放大。只有 `768P` 母版时，按实际宽高下调预算中的显示尺寸或
+  目标 DPR；例如 `1344×768` 可覆盖 `1280×720` CSS px、目标 DPR `1.05`，
+  具体参数与复核方法见 [显示预算取舍](delivery-selection.md#母版像素不足时的显示预算)。
 - 是否插帧由 Motion Brief 的 `frame_policy` 决定，提示词不要求模型自行提高帧率。
